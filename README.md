@@ -38,7 +38,18 @@ The product goal is not to maximize the number of canned responses. The primary 
 
 ## Results
 
-*In progress. Before/after numbers will be added after the batch evaluation and fix-and-remeasure cycle. No performance number is claimed before the system has actually been measured.*
+### Initial 24-ticket evaluation
+
+The working agent was run against all 24 synthetic tickets with **no execution errors**.
+
+- **19/19 deterministic routing cases matched the expected route (100%)** — all clean-match cases, policy-driven escalations, `Other` cases, and security/no-KB cases were routed correctly.
+- **5 ambiguous cases were not scored as right/wrong**, because the evaluation set deliberately defines two defensible categories for each of them.
+- **18/19 deterministic cases had the expected category (94.7%)**. The one category mismatch was the phishing case (T22), where the agent classified it as `Other` instead of the predicted `Access & Permissions`; importantly, it still correctly escalated the ticket.
+- **0 execution errors** were recorded across the 24 runs.
+
+The primary product metric is routing correctness rather than category classification, so the initial measured result is **100% routing accuracy on the 19 deterministic cases**, with the five ambiguous cases treated separately for qualitative analysis.
+
+This is an initial evaluation result, not a claim of production accuracy. The next step is targeted error analysis and, if warranted, a fix-and-remeasure cycle on the same evaluation set.
 
 ## Design decisions
 
@@ -58,7 +69,3 @@ The product goal is not to maximize the number of canned responses. The primary 
 | `mini_prd.md` | Problem, target user, success metric, guardrail, and v1 scope |
 | `index.html` | GitHub Pages project case-study page |
 | `START_HERE.md` | Project status and run/ship instructions |
-
-## Live demo
-
-The live-demo link is intentionally left as a placeholder until the Claude artifact is published. Once published, replace the `#` link above and in `index.html`.
