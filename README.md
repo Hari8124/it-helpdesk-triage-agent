@@ -2,8 +2,6 @@
 
 An agentic ticket-triage system for a corporate internal helpdesk — built as a portfolio project for AI Agent PM roles.
 
-**[Try the live demo →](#)** *(replace this with the published Claude artifact link once available)*
-
 ## What it does
 
 Given a free-text employee IT ticket, the agent:
