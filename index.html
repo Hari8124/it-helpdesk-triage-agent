@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Helpdesk Triage Agent — Project Case Study</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root{--bg:#F5F6F3;--surface:#FFF;--ink:#1A1D23;--ink-soft:#5B6270;--border:#E2E4E0;--network:#2C766A;--radius:10px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',-apple-system,sans-serif;line-height:1.6}
+.wrap{max-width:780px;margin:0 auto;padding:48px 20px 80px}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px}
+h1{font-size:28px;margin:0 0 14px;letter-spacing:-.01em}
+.lede{font-size:16px;color:var(--ink-soft);max-width:60ch;margin:0 0 28px}
+.cta-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:48px}
+.btn{display:inline-block;padding:11px 18px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;font-family:inherit}
+.btn-primary{background:var(--ink);color:#fff}.btn-primary:hover{background:var(--network)}
+.btn-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--border)}
+section{margin-bottom:44px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin:0 0 16px}
+p{margin:0 0 12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
+.flow-step{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;font-weight:500}
+.flow-arrow{color:var(--ink-soft);font-size:15px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tool-tag{font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--ink-soft)}
+.eval-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+@media(max-width:560px){.eval-grid{grid-template-columns:1fr}}
+.eval-item{border-left:3px solid var(--network);padding:4px 0 4px 12px;font-size:13.5px}
+.eval-item b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+.pending{background:#FBF3E5;border:1px solid #EFD9A8;border-radius:var(--radius);padding:18px 20px;font-size:14px}
+.pending b{display:block;margin-bottom:4px}
+.decisions{padding-left:0;list-style:none;margin:0}
+.decisions li{padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.decisions li:last-child{border-bottom:none}
+.decisions b{display:block;margin-bottom:3px}
+footer{font-size:12.5px;color:var(--ink-soft);border-top:1px solid var(--border);padding-top:20px;margin-top:56px}
+footer a{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<p class="eyebrow">Portfolio project — AI Agent PM</p>
+<h1>IT Helpdesk Triage Agent</h1>
+<p class="lede">An agentic ticket-triage system for a corporate internal helpdesk: classifies incoming IT tickets, retrieves relevant knowledge, decides whether the issue can receive a documented first response or needs a human specialist, and drafts that response.</p>
+<div class="cta-row">
+<a class="btn btn-primary" href="#">Try the live demo →</a>
+<a class="btn btn-secondary" href="https://github.com/Hari8124/it-helpdesk-triage-agent">View source on GitHub</a>
+</div>
+
+<section>
+<h2>How it works</h2>
+<div class="card">
+<div class="flow">
+<div class="flow-step">Ticket</div><div class="flow-arrow">→</div>
+<div class="flow-step">Classify</div><div class="flow-arrow">→</div>
+<div class="flow-step">Search KB</div><div class="flow-arrow">→</div>
+<div class="flow-step">Decide</div><div class="flow-arrow">→</div>
+<div class="flow-step">Draft</div>
+</div>
+<p style="margin-top:16px;font-size:13.5px;color:var(--ink-soft)">Classification and decision are handled by Claude. Knowledge retrieval is a transparent category-scoped keyword matcher over the 8-article KB, keeping the prototype simple and inspectable.</p>
+<div class="tools">
+<span class="tool-tag">Claude</span>
+<span class="tool-tag">8-article knowledge base</span>
+<span class="tool-tag">24-ticket evaluator</span>
+<span class="tool-tag">Claude.ai artifact</span>
+</div>
+</div>
+</section>
+
+<section>
+<h2>Evaluation</h2>
+<p>24 synthetic tickets designed to test both normal resolution and conservative escalation:</p>
+<div class="eval-grid">
+<div class="eval-item"><b>8 tickets</b>Clean category + KB match → should resolve with a canned response</div>
+<div class="eval-item"><b>6 tickets</b>Category obvious, but policy should override to escalate</div>
+<div class="eval-item"><b>5 tickets</b>Genuinely ambiguous — two categories are defensible</div>
+<div class="eval-item"><b>5 tickets</b>Security, Other, and no-KB-match cases</div>
+</div>
+</section>
+
+<section>
+<h2>Product guardrail</h2>
+<div class="card">
+<p><strong>Safety, security, and privileged-access tickets must never be incorrectly resolved with a canned response.</strong></p>
+<p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:0">The product is intentionally conservative: an unnecessary escalation is preferable to confidently giving the wrong automated resolution in a high-risk case.</p>
+</div>
+</section>
+
+<section>
+<h2>Results</h2>
+<div class="pending">
+<b>Evaluation pending</b>
+The 24-ticket batch still needs to be run in the working Claude artifact. Before/after numbers will be added after error analysis, one targeted fix, and a re-run. No guessed performance number is shown.
+</div>
+</section>
+
+<section>
+<h2>Design decisions</h2>
+<ul class="decisions">
+<li><b>Explicit multi-stage flow</b>Classification, retrieval, decision, and drafting are separate stages, making the system easier to inspect and debug than a single large prompt.</li>
+<li><b>Simple retrieval for a small KB</b>With eight articles, category-scoped keyword matching is transparent and avoids unnecessary retrieval infrastructure in the prototype.</li>
+<li><b>Root-cause check before resolution</b>A topical KB match is not enough; the decision stage checks whether the article actually addresses the issue described.</li>
+<li><b>Conservative escalation</b>Safety, security, privileged access, possible outages, failed troubleshooting, no-match cases, and uncertainty route to a human.</li>
+<li><b>Free-tier prototype</b>The project stays inspectable and avoids building a production ticketing integration that is outside the v1 scope.</li>
+</ul>
+</section>
+
+<footer>
+Source, knowledge base, and evaluation set are in the <a href="https://github.com/Hari8124/it-helpdesk-triage-agent">GitHub repository</a>. Built with Claude.
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Helpdesk Triage Agent — v1</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #F5F6F3;
+  --surface: #FFFFFF;
+  --ink: #1A1D23;
+  --ink-soft: #5B6270;
+  --border: #E2E4E0;
+  --hardware: #9C5A38;
+  --software: #3A5A78;
+  --access: #6B5478;
+  --network: #2C766A;
+  --other: #6B7280;
+  --canned: #3F7D4A;
+  --escalate: #B8791E;
+  --error: #B23B3B;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.app { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; }
+header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom: 24px; }
+.brand { display:flex; gap: 12px; align-items:flex-start; }
+.brand-mark { font-size: 26px; color: var(--network); line-height: 1.1; }
+h1 { font-size: 19px; margin: 0 0 2px; letter-spacing: -0.01em; }
+.subtitle { margin:0; font-size: 12.5px; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; }
+.kb-toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 8px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-soft); cursor: pointer; white-space: nowrap; flex-shrink:0; }
+.kb-toggle:hover { border-color: var(--ink-soft); color: var(--ink); }
+.kb-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 20px; display: grid; gap: 10px; }
+.kb-item { display:flex; gap: 12px; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.kb-item:last-child { border-bottom: none; padding-bottom: 0; }
+.kb-id { font-family:'IBM Plex Mono', monospace; color: var(--ink-soft); flex-shrink:0; width: 56px; padding-top: 1px; }
+.kb-title { font-weight: 500; }
+.kb-cat { color: var(--ink-soft); font-size: 12px; margin-top: 1px; }
+.intake { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+label { display:block; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); margin-bottom: 8px; font-family: 'IBM Plex Mono', monospace; }
+textarea { width:100%; min-height: 90px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: inherit; font-size: 14px; resize: vertical; background: var(--bg); color: var(--ink); }
+textarea:focus-visible { outline: 2px solid var(--network); outline-offset: 1px; }
+.examples { display:flex; align-items:center; gap:8px; flex-wrap: wrap; margin-top: 10px; }
+.examples span { font-size: 12px; color: var(--ink-soft); }
+.example-btn { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 12px; cursor: pointer; color: var(--ink); font-family: inherit; }
+.example-btn:hover { border-color: var(--network); color: var(--network); }
+.triage-btn { margin-top: 16px; width: 100%; background: var(--ink); color: white; border: none; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+.triage-btn:hover:not(:disabled) { background: var(--network); }
+.triage-btn:disabled { opacity: 0.55; cursor: default; }
+.stepper { display:flex; gap: 6px; margin-bottom: 20px; }
+.step { flex:1; text-align:center; font-size: 10.5px; font-family:'IBM Plex Mono', monospace; color: var(--ink-soft); padding-top: 12px; position: relative; text-transform: uppercase; letter-spacing: 0.04em; }
+.step::before { content:""; position:absolute; top:0; left:0; right:0; height:3px; background: var(--border); border-radius: 3px; transition: background 0.2s; }
+.step.active { color: var(--network); }
+.step.active::before { background: var(--network); }
+.step.done::before { background: var(--canned); }
+.result { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity:0; transform: translateY(4px);} to {opacity:1; transform:none;} }
+@media (prefers-reduced-motion: reduce) { .result { animation: none; } }
+.result-header { display:flex; gap:8px; align-items:center; flex-wrap: wrap; margin-bottom: 14px; }
+.badge { font-size: 10.5px; font-weight:600; padding: 5px 10px; border-radius: 999px; color:white; font-family:'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.03em; }
+.cat-hardware { background: var(--hardware); }
+.cat-software { background: var(--software); }
+.cat-access-permissions { background: var(--access); }
+.cat-network { background: var(--network); }
+.cat-other { background: var(--other); }
+.route-canned_response { background: var(--canned); }
+.route-escalate_to_human { background: var(--escalate); }
+.kb-ref { font-family:'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--ink-soft); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
+.escalation-reason { background: #FBF3E5; border: 1px solid #EFD9A8; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 14px; }
+.draft-response { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.draft-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin-bottom: 8px; font-family:'IBM Plex Mono', monospace; }
+.draft-body { font-size: 14px; white-space: pre-wrap; }
+.reasoning { margin-top: 14px; font-size: 13px; color: var(--ink-soft); }
+.reasoning summary { cursor: pointer; font-family:'IBM Plex Mono', monospace; font-size: 11.5px; }
+.reasoning p { margin: 8px 0 0; }
+.error-card { background: #FBEAEA; border: 1px solid #E8B4B4; color: var(--error); border-radius: var(--radius); padding: 14px 16px; font-size: 13px; }
+.batch { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 28px; }
+.batch-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom: 6px; }
+.batch-head h2 { font-size: 15px; margin: 0; }
+.batch-desc { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 16px; }
+.batch-btn { background: var(--ink); color: white; border: none; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.batch-btn:hover:not(:disabled) { background: var(--network); }
+.batch-btn:disabled { opacity: 0.55; cursor: default; }
+.batch-progress { font-family:'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-soft); margin: 12px 0; min-height: 16px; }
+.batch-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+.batch-table th { text-align:left; font-family:'IBM Plex Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.batch-table td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.badge.small { font-size: 9.5px; padding: 3px 8px; }
+.row-expand { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; font-size: 11px; cursor: pointer; color: var(--ink-soft); font-family: inherit; }
+.row-expand:hover { border-color: var(--network); color: var(--network); }
+.detail-row td { background: var(--bg); }
+.detail-box p { margin: 6px 0; font-size: 12.5px; }
+.batch-row-error td { color: var(--error); font-size: 12px; }
+.export-area { width: 100%; min-height: 140px; margin-top: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--bg); color: var(--ink); }
+.export-hint { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; }
+footer { margin-top: 26px; font-size: 12px; color: var(--ink-soft); text-align:center; }
+footer a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <span class="brand-mark">◧</span>
+      <div>
+        <h1>IT Helpdesk Triage Agent</h1>
+        <p class="subtitle">v1 · classify → search KB → decide → draft</p>
+      </div>
+    </div>
+    <button class="kb-toggle" id="kbToggle" aria-expanded="false">Knowledge base (8) ▾</button>
+  </header>
+
+  <div class="kb-panel" id="kbPanel" hidden></div>
+
+  <main>
+    <section class="intake">
+      <label for="ticketInput">Incoming ticket</label>
+      <textarea id="ticketInput" placeholder="Paste or type an employee IT ticket..."></textarea>
+      <div class="examples">
+        <span>Try:</span>
+        <button class="example-btn" data-example="0" type="button">Dead laptop</button>
+        <button class="example-btn" data-example="1" type="button">Admin access request</button>
+        <button class="example-btn" data-example="2" type="button">Office wifi down</button>
+      </div>
+      <button id="triageBtn" class="triage-btn" type="button">Triage ticket →</button>
+    </section>
+
+    <div class="stepper" id="stepper">
+      <div class="step" data-step="classify">Classify</div>
+      <div class="step" data-step="search">Search KB</div>
+      <div class="step" data-step="decide">Decide</div>
+      <div class="step" data-step="draft">Draft</div>
+    </div>
+
+    <section class="result" id="resultCard" hidden></section>
+    <section class="error-card" id="errorCard" hidden role="alert"></section>
+
+    <section class="batch">
+      <div class="batch-head">
+        <h2>Batch eval — 24 tickets</h2>
+        <button class="batch-btn" id="batchBtn" type="button">Run all 24 tickets</button>
+      </div>
+      <p class="batch-desc">Runs the same agent loop above against the full eval set, one ticket at a time, live. Takes a couple of minutes — nothing here is precomputed.</p>
+      <p class="batch-progress" id="batchProgress"></p>
+      <div id="batchTableWrap"></div>
+      <button class="row-expand" id="exportBtn" type="button" style="display:none; margin-top:14px;">Export results as JSON</button>
+      <p class="export-hint" id="exportHint"></p>
+      <textarea class="export-area" id="exportArea" readonly hidden></textarea>
+    </section>
+  </main>
+
+  <footer>v1 prototype — keyword-matched retrieval over 8 articles. Not a production RAG pipeline.</footer>
+</div>
+
+<script>
+const KB = [
+  {id:"KB-001", title:"Laptop won't power on or charge", category:"Hardware",
+   keywords:["laptop dead","won't turn on","not charging","battery not charging","power button","no lights when plugged in","charger","dead battery","won't power on"],
+   summary:"Troubleshooting for a laptop that won't power on or charge.",
+   steps:["Confirm the charger is fully seated at both ends; try a different outlet.","Look for any light on the charging brick or laptop's charging port when plugged in.","Hold the power button for 15 seconds to force a hard reset, then try powering on.","Try a colleague's charger of the same model to isolate charger vs. laptop.","Check for visible damage to the cable or port."],
+   escalateIf:"Physical damage, liquid exposure, a burning smell, or a swollen battery — treat as a safety issue, escalate immediately."},
+  {id:"KB-002", title:"External monitor not detected", category:"Hardware",
+   keywords:["monitor not detected","external display not working","second screen","hdmi","usb-c","docking station","display not working","dock"],
+   summary:"Troubleshooting for an external monitor or dock not being detected.",
+   steps:["Confirm the cable is fully seated at both the laptop/dock and monitor.","Try a different port or cable if available (HDMI vs DisplayPort vs USB-C).","Force a display refresh (Windows: Win+P; Mac: System Settings → Displays → Detect Displays).","Restart the laptop with the monitor already connected.","If using a dock, connect the monitor directly to the laptop to isolate the dock as the cause."],
+   escalateIf:"Issue persists across multiple ports/cables/docks — likely a hardware fault needing a loaner or replacement."},
+  {id:"KB-003", title:"Application crashing or won't open", category:"Software",
+   keywords:["app crashes","program won't open","software freezing","not responding","crashes on launch","keeps crashing","won't launch","freezing"],
+   summary:"General troubleshooting for a crashing or unresponsive application.",
+   steps:["Fully close and reopen the application.","Restart the computer.","Check Software Center for a pending update to the application.","Confirm at least 2GB of free disk space.","If it's a single document, try opening a different file to isolate a corrupt file vs. a broken install."],
+   escalateIf:"The crash caused data loss, the app is business-critical (e.g. finance/ERP) and work is blocked, or the issue persists after the update/restart steps."},
+  {id:"KB-004", title:"Software installation or license request", category:"Software",
+   keywords:["need to install","request software","license request","can't install","admin rights to install","software center","need a license","install a program"],
+   summary:"How to request new software or a license.",
+   steps:["Check Software Center / the app catalog first — many tools are available as self-service installs.","If it needs a paid license, submit the software request form with business justification; manager approval may be required.","Standard requests are typically fulfilled within 1–2 business days once approved."],
+   escalateIf:"The software isn't on the approved list (needs security/compliance review) or is high-risk (admin tooling, browser extensions with broad permissions)."},
+  {id:"KB-005", title:"Password reset or account lockout", category:"Access & Permissions",
+   keywords:["forgot password","locked out","account locked","can't log in","password expired","mfa","reset my password","cant login"],
+   summary:"Self-service password reset and lockout recovery.",
+   steps:["Use the self-service password reset portal (requires enrolled MFA or security questions).","Lockouts from repeated failed attempts typically self-clear after 30 minutes, or can be cleared via the same portal."],
+   escalateIf:"The employee can't complete identity verification (lost MFA device, no backup method), or there's any hint the lockout is from a suspicious/unauthorized attempt — always a human, regardless of urgency."},
+  {id:"KB-006", title:"Requesting access to a shared drive or system", category:"Access & Permissions",
+   keywords:["need access to","permission denied","access request","can't open shared drive","request folder access","system access","need permission","can't access"],
+   summary:"Standard process for requesting access to drives, DLs, or line-of-business apps.",
+   steps:["Standard access requests go through the Access Request form, routed to the resource owner for approval.","Typical turnaround is 2–3 business days pending approval; note urgency and business reason for time-sensitive requests."],
+   escalateIf:"The request is for elevated or admin-level access (production systems, financial systems, HR/payroll data, local admin rights) — always human review, never auto-approved, no matter how urgent it's framed."},
+  {id:"KB-007", title:"VPN connection issues", category:"Network",
+   keywords:["vpn won't connect","vpn disconnecting","can't connect to vpn","vpn timeout","remote access","vpn keeps dropping","vpn not working"],
+   summary:"Troubleshooting for VPN connection and stability issues.",
+   steps:["Confirm general internet access works without the VPN first.","Fully quit and relaunch the VPN client (not just disconnect/reconnect).","Restart the computer.","Confirm the VPN client is up to date via Software Center.","On public/hotel/coffee-shop Wi-Fi, some networks block VPN ports — try a mobile hotspot to isolate."],
+   escalateIf:"Urgent access to business-critical systems is blocked and steps don't resolve it quickly, or several people report it at once (possible infrastructure issue)."},
+  {id:"KB-008", title:"Wi-Fi or office network connectivity", category:"Network",
+   keywords:["wifi not working","can't connect to network","internet not working in office","wifi keeps dropping","ethernet not working","no internet","wifi down"],
+   summary:"Troubleshooting for office Wi-Fi or ethernet connectivity.",
+   steps:["Toggle Wi-Fi off/on or reconnect to the network.","Forget the network and reconnect with credentials.","Restart the laptop.","On ethernet, check the cable is fully seated and try a different port/cable.","Ask whether nearby colleagues are also affected."],
+   escalateIf:"Multiple employees in the same location report it simultaneously — likely an infrastructure outage, needs immediate network-team escalation rather than individual replies."}
+];
+
+const TICKETS = [
+  {id:"T01", text:"Hi, my laptop won't turn on today. I left it plugged in overnight but there's no light on the charger or the laptop when I press the power button. Tried a different outlet too, still nothing."},
+  {id:"T02", text:"hey the external monitor at my desk stopped showing anything this morning. it was working fine friday. i checked the hdmi cable and its plugged in on both ends"},
+  {id:"T03", text:"Excel keeps crashing every time I try to open one specific spreadsheet, it just freezes for a few seconds and then closes. Other spreadsheets open fine. This is the only one that does it."},
+  {id:"T04", text:"Hi team, I need Adobe Acrobat Pro installed on my laptop for a contract review I'm doing next week. Not sure if this needs manager approval or if I can just request it. Thanks!"},
+  {id:"T05", text:"I forgot my password and got locked out after a few tries. I have the authenticator app on my phone if that helps. Need to get back in soon, have a 1pm deadline."},
+  {id:"T06", text:"Could someone grant me access to the Marketing Assets shared drive? My manager (Dana) said I'd need it for the Q3 campaign work starting this week."},
+  {id:"T07", text:"My VPN client keeps saying 'connection timed out' when I try to connect from home this morning. Internet itself is working fine, I can browse normally, it's just the VPN."},
+  {id:"T08", text:"The wifi on my laptop keeps dropping every 10-15 min today, just at my desk though, my coworker next to me hasn't had any issues. Reconnecting fixes it temporarily."},
+  {id:"T09", text:"This might be nothing but my laptop has started smelling like burning plastic when it's been on for a while, especially near the left hinge. Should I keep using it?"},
+  {id:"T10", text:"Our finance close tool (NetSuite) just crashed and I lost about an hour of unsaved reconciliation work. This is happening for two other people on my team too, right in the middle of month-end close."},
+  {id:"T11", text:"Can I get admin/root access to the prod Kubernetes cluster? Need it to debug a deploy issue for the release going out Thursday."},
+  {id:"T12", text:"I got locked out of my account and when I finally reset my password, I noticed there was a login attempt logged from a location I don't recognize last night. Is that normal?"},
+  {id:"T13", text:"Not sure if this is just me but literally the entire 3rd floor has no internet right now, like 20+ people including me. Started about 15 min ago."},
+  {id:"T14", text:"VPN has been down for 2 hours. I've restarted my laptop twice, fully reinstalled the VPN client, tried a different network. Nothing works. I have a client call in 10 minutes and need VPN to access our files."},
+  {id:"T15", text:"My laptop won't connect to any wifi network at all, not even my phone's hotspot, even though it shows wifi as 'on' in settings. Other devices connect to the same networks fine."},
+  {id:"T16", text:"I can't log into Salesforce, it just says 'invalid session, please try again' over and over no matter how many times I re-enter my password."},
+  {id:"T17", text:"My laptop has gotten so slow over the past week or two. Just opening Chrome takes like 5 minutes now. It didn't used to be like this."},
+  {id:"T18", text:"I can open the Finance shared drive fine at the office but when I work from home I get 'access denied.' Nothing's changed about my account as far as I know."},
+  {id:"T19", text:"Every time my laptop wakes up from sleep, my second monitor stays black. I have to unplug the HDMI cable and plug it back in to get it to show anything again."},
+  {id:"T20", text:"Is there someone I should talk to about getting a standing desk converter? My back's been bothering me sitting all day."},
+  {id:"T21", text:"Do I need to request a parking permit for the new garage on 5th street or is my old badge still going to work there?"},
+  {id:"T22", text:"I think I might have clicked a phishing link. I got an email that looked like it was from IT asking me to verify my password on a login page, and I entered it before I second-guessed myself. What do I do?"},
+  {id:"T23", text:"This is a weird one — when I share my second monitor on Zoom calls, everyone on the call sees a green tint over everything, but only when I share that specific monitor. Sharing my main screen looks totally normal."},
+  {id:"T24", text:"A few keys on my keyboard aren't registering when I type, mainly E, R, and the space bar. It's making it really hard to type anything without a bunch of typos."}
+];
+
+const CATEGORIES = ["Hardware","Software","Access & Permissions","Network","Other"];
+
+const CLASSIFY_SYSTEM_PROMPT = `You are the classification step of an IT helpdesk triage agent. Given an employee's IT ticket, output ONLY a JSON object — no markdown code fences, no explanation before or after, just the raw JSON on its own:
+
+{"category": "<one of: Hardware, Software, Access & Permissions, Network, Other>", "search_query": "<a short phrase, 5-10 words, describing the core symptom, for searching a knowledge base>"}`;
+
+function decideSystemPrompt(category, kbResultsText) {
+  return `You are the decision step of an IT helpdesk triage agent. A ticket has already been classified as category "${category}". Here is what the knowledge base search returned:
+
+${kbResultsText}
+
+First work out whether the article above actually addresses the true underlying cause of this specific ticket — not just whether it's topically related. Then decide the route: "canned_response" (the article genuinely resolves it) or "escalate_to_human". Choose escalate_to_human if ANY of these apply, even when an article partially matches:
+- No article was returned above
+- The article is topically related but doesn't address the actual root cause described in the ticket (e.g. it covers a different failure mode in the same general area)
+- The ticket mentions a safety issue (burning smell, smoke, sparking, liquid damage)
+- The ticket mentions a security concern (phishing, suspicious login, compromised account, malware)
+- The ticket asks for privileged or elevated access (admin rights, production systems, financial or HR data)
+- The employee says they already tried standard troubleshooting and it didn't work
+- The ticket mentions multiple people or locations affected (possible outage)
+- The category is "Other"
+- You're not confident a single category/article fits
+
+Your decision must follow from your own reasoning, not just be paired with it. If your reasoning concludes the article doesn't really cover the cause, or that something else is actually going on, that has to end in escalate_to_human — not canned_response with a caveat buried in the text.
+
+If escalating: draft_response is a short, warm acknowledgment (2-4 sentences) — confirm receipt, name the category/team, set a realistic expectation without inventing a specific time you don't know.
+If resolving: draft_response is a short, friendly message (3-6 sentences) walking through the steps above in your own words, inviting a reply if it doesn't help (which will then be escalated).
+
+Output ONLY a JSON object, with internal_reasoning FIRST so your decision is actually downstream of it, not parallel to it — no markdown code fences, no explanation:
+
+{"internal_reasoning": "<1-2 sentences: does the article above genuinely address the root cause of this ticket, or not? internal use only, never shown to the employee>", "decision": "<canned_response or escalate_to_human — must match the conclusion in internal_reasoning above>", "kb_article_id": "<the [ID] used above, or empty string>", "draft_response": "<the message text>", "escalation_reason": "<brief reason, or empty string if not escalating>"}`;
+}
+
+function parseJSONResponse(text) {
+  const trimmed = (text || "").trim();
+  try { return JSON.parse(trimmed); } catch (e) {}
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) {
+    try { return JSON.parse(fenceMatch[1].trim()); } catch (e) {}
+  }
+  const first = trimmed.indexOf('{');
+  const last = trimmed.lastIndexOf('}');
+  if (first !== -1 && last !== -1 && last > first) {
+    try { return JSON.parse(trimmed.slice(first, last + 1)); } catch (e) {}
+  }
+  throw new Error("PARSE_FAILURE: couldn't extract valid JSON from the model's response. Raw text: " + trimmed.slice(0, 400));
+}
+
+
+function searchKB(category, query) {
+  const q = (query || "").toLowerCase();
+  const qWords = q.split(/[^a-z0-9]+/).filter(w => w.length > 2);
+  const candidates = KB.filter(a => a.category === category);
+  const scored = candidates.map(a => {
+    const haystack = (a.title + " " + a.keywords.join(" ") + " " + a.summary).toLowerCase();
+    let score = 0;
+    qWords.forEach(w => { if (haystack.includes(w)) score++; });
+    return {article: a, score};
+  }).sort((a,b) => b.score - a.score);
+  const top = scored.filter(s => s.score > 0).slice(0, 2);
+  return top.map(t => ({
+    id: t.article.id, title: t.article.title, summary: t.article.summary,
+    steps: t.article.steps, escalate_if: t.article.escalateIf
+  }));
+}
+
+async function callClaude(systemPrompt, userMessage) {
+  let response;
+  try {
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{role: "user", content: userMessage}]
+      })
+    });
+  } catch (networkErr) {
+    throw new Error("NETWORK_FAILURE: the request to the Claude API never got a response (" + networkErr.message + "). This usually means the AI-powered-artifacts capability isn't reachable from here — not a bug in the agent logic itself.");
+  }
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error("API_ERROR " + response.status + ": " + errText);
+  }
+  const data = await response.json();
+  return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+}
+
+async function runTriageAgent(ticketText, onStep) {
+  onStep("classify");
+  const classifyRaw = await callClaude(CLASSIFY_SYSTEM_PROMPT, "Ticket: " + ticketText);
+  const classified = parseJSONResponse(classifyRaw);
+  const category = classified.category;
+  const searchQuery = classified.search_query || "";
+
+  onStep("search");
+  const kbMatches = searchKB(category, searchQuery);
+  const kbResultsText = kbMatches.length > 0
+    ? kbMatches.map(a => "[" + a.id + "] " + a.title + "\nSteps: " + a.steps.join(" ") + "\nEscalate if: " + a.escalate_if).join("\n\n")
+    : "(no matching article found)";
+
+  onStep("decide");
+  const decideRaw = await callClaude(decideSystemPrompt(category, kbResultsText), "Ticket: " + ticketText);
+  const decided = parseJSONResponse(decideRaw);
+  onStep("draft");
+
+  const result = {
+    category: category,
+    decision: decided.decision,
+    kb_article_id: decided.kb_article_id || "",
+    draft_response: decided.draft_response,
+    escalation_reason: decided.escalation_reason || "",
+    internal_reasoning: decided.internal_reasoning || ""
+  };
+  return { result: result, transcript: [
+    {step: "classify", raw: classifyRaw},
+    {step: "kb_search", category: category, query: searchQuery, results: kbResultsText},
+    {step: "decide", raw: decideRaw}
+  ]};
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str || "";
+  return div.innerHTML;
+}
+
+function renderKBPanel() {
+  const panel = document.getElementById("kbPanel");
+  panel.innerHTML = KB.map(a => `
+    <div class="kb-item">
+      <span class="kb-id">${a.id}</span>
+      <div>
+        <div class="kb-title">${escapeHtml(a.title)}</div>
+        <div class="kb-cat">${escapeHtml(a.category)} · ${escapeHtml(a.summary)}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function resetStepper() {
+  document.querySelectorAll(".step").forEach(s => s.classList.remove("active","done"));
+}
+function setStep(name) {
+  const order = ["classify","search","decide","draft"];
+  const idx = order.indexOf(name);
+  document.querySelectorAll(".step").forEach(s => {
+    const sIdx = order.indexOf(s.dataset.step);
+    if (sIdx < idx) { s.classList.add("done"); s.classList.remove("active"); }
+    else if (sIdx === idx) { s.classList.add("active"); s.classList.remove("done"); }
+    else { s.classList.remove("active","done"); }
+  });
+}
+
+function renderResult(r) {
+  const card = document.getElementById("resultCard");
+  const isCanned = r.decision === "canned_response";
+  const catClass = "cat-" + r.category.toLowerCase().replace(/[^a-z]+/g, "-");
+  card.innerHTML = `
+    <div class="result-header">
+      <span class="badge ${catClass}">${escapeHtml(r.category)}</span>
+      <span class="badge route-${r.decision}">${isCanned ? "Canned response" : "Escalate to human"}</span>
+      ${r.kb_article_id ? `<span class="kb-ref">${escapeHtml(r.kb_article_id)}</span>` : ""}
+    </div>
+    ${(!isCanned && r.escalation_reason) ? `<div class="escalation-reason"><strong>Why escalate:</strong> ${escapeHtml(r.escalation_reason)}</div>` : ""}
+    <div class="draft-response">
+      <div class="draft-label">Draft first response</div>
+      <div class="draft-body">${escapeHtml(r.draft_response)}</div>
+    </div>
+    <details class="reasoning">
+      <summary>Agent's internal reasoning (not shown to employee)</summary>
+      <p>${escapeHtml(r.internal_reasoning)}</p>
+    </details>
+  `;
+}
+
+const exampleTickets = [
+  "My laptop won't turn on. I tried plugging it into a different outlet but nothing happens, not even a light on the charger.",
+  "Can someone give me admin access to the production deployment server? I need it for a project I'm working on this week.",
+  "Ever since the office wifi update this morning, half my team can't get online and I can't join my 10am call."
+];
+
+document.querySelectorAll(".example-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const idx = parseInt(btn.dataset.example, 10);
+    document.getElementById("ticketInput").value = exampleTickets[idx];
+  });
+});
+
+document.getElementById("kbToggle").addEventListener("click", () => {
+  const panel = document.getElementById("kbPanel");
+  const toggle = document.getElementById("kbToggle");
+  panel.hidden = !panel.hidden;
+  toggle.setAttribute("aria-expanded", String(!panel.hidden));
+  toggle.textContent = panel.hidden ? "Knowledge base (8) ▾" : "Knowledge base (8) ▴";
+});
+
+document.getElementById("triageBtn").addEventListener("click", async () => {
+  const ticketText = document.getElementById("ticketInput").value.trim();
+  const resultCard = document.getElementById("resultCard");
+  const errorCard = document.getElementById("errorCard");
+  const btn = document.getElementById("triageBtn");
+  if (!ticketText) return;
+  resultCard.hidden = true;
+  errorCard.hidden = true;
+  resetStepper();
+  btn.disabled = true;
+  btn.textContent = "Triaging…";
+  try {
+    const {result} = await runTriageAgent(ticketText, setStep);
+    renderResult(result);
+    resultCard.hidden = false;
+  } catch (err) {
+    errorCard.hidden = false;
+    errorCard.innerHTML = '<div style="margin-bottom:8px;">' + escapeHtml(err.message) + '</div><button class="row-expand" id="copyErrBtn" type="button">Copy exact error</button>';
+    document.getElementById("copyErrBtn").addEventListener("click", () => {
+      const b = document.getElementById("copyErrBtn");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(err.message).then(() => { b.textContent = "Copied!"; }).catch(() => { b.textContent = "Select the text above"; });
+      } else {
+        b.textContent = "Select the text above";
+      }
+    });
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Triage ticket →";
+  }
+});
+
+let batchResults = [];
+
+function renderBatchTable() {
+  const wrap = document.getElementById("batchTableWrap");
+  if (batchResults.length === 0) { wrap.innerHTML = ""; return; }
+  wrap.innerHTML = `<table class="batch-table"><thead><tr><th>#</th><th>Category</th><th>Route</th><th>KB</th><th></th></tr></thead><tbody>` +
+    batchResults.map((r, i) => {
+      if (r.error) {
+        return `<tr class="batch-row-error"><td>${r.ticket_id}</td><td colspan="3">Error: ${escapeHtml(r.error)}</td><td></td></tr>`;
+      }
+      const catClass = "cat-" + r.category.toLowerCase().replace(/[^a-z]+/g, "-");
+      return `<tr>
+        <td>${r.ticket_id}</td>
+        <td><span class="badge small ${catClass}">${escapeHtml(r.category)}</span></td>
+        <td><span class="badge small route-${r.decision}">${r.decision === "canned_response" ? "Canned" : "Escalate"}</span></td>
+        <td>${r.kb_article_id ? escapeHtml(r.kb_article_id) : "—"}</td>
+        <td><button class="row-expand" data-idx="${i}" type="button">view</button></td>
+      </tr>
+      <tr class="detail-row" id="detail-${i}" hidden><td colspan="5"><div class="detail-box">
+        <p><strong>Ticket:</strong> ${escapeHtml(r.ticket_text)}</p>
+        ${r.escalation_reason ? `<p><strong>Why escalate:</strong> ${escapeHtml(r.escalation_reason)}</p>` : ""}
+        <p><strong>Draft:</strong> ${escapeHtml(r.draft_response)}</p>
+        <p><strong>Reasoning:</strong> ${escapeHtml(r.internal_reasoning)}</p>
+      </div></td></tr>`;
+    }).join("") +
+    `</tbody></table>`;
+  wrap.querySelectorAll(".row-expand").forEach(b => {
+    b.addEventListener("click", () => {
+      const row = document.getElementById("detail-" + b.dataset.idx);
+      row.hidden = !row.hidden;
+      b.textContent = row.hidden ? "view" : "hide";
+    });
+  });
+}
+
+async function runBatch() {
+  const btn = document.getElementById("batchBtn");
+  const progress = document.getElementById("batchProgress");
+  const exportBtn = document.getElementById("exportBtn");
+  const exportArea = document.getElementById("exportArea");
+  const exportHint = document.getElementById("exportHint");
+  btn.disabled = true;
+  exportBtn.style.display = "none";
+  exportArea.hidden = true;
+  exportHint.textContent = "";
+  batchResults = [];
+  renderBatchTable();
+  for (let i = 0; i < TICKETS.length; i++) {
+    const t = TICKETS[i];
+    progress.textContent = "Running " + (i + 1) + " of " + TICKETS.length + " — " + t.id + "…";
+    try {
+      const { result } = await runTriageAgent(t.text, () => {});
+      batchResults.push(Object.assign({ ticket_id: t.id, ticket_text: t.text, error: null }, result));
+    } catch (err) {
+      batchResults.push({ ticket_id: t.id, ticket_text: t.text, error: err.message });
+    }
+    renderBatchTable();
+    await new Promise(r => setTimeout(r, 250));
+  }
+  progress.textContent = "Done — " + TICKETS.length + " tickets processed.";
+  console.log(JSON.stringify(batchResults, null, 2));
+  btn.disabled = false;
+  exportBtn.style.display = "inline-block";
+}
+
+function exportResults() {
+  const text = JSON.stringify(batchResults, null, 2);
+  const exportArea = document.getElementById("exportArea");
+  const exportHint = document.getElementById("exportHint");
+  exportArea.value = text;
+  exportArea.hidden = false;
+  exportArea.focus();
+  exportArea.select();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      exportHint.textContent = "Copied to clipboard — also selected below in case you need it.";
+    }).catch(() => {
+      exportHint.textContent = "Couldn't auto-copy — text is selected below, copy with Ctrl/Cmd+C.";
+    });
+  } else {
+    exportHint.textContent = "Text is selected below — copy with Ctrl/Cmd+C.";
+  }
+}
+
+document.getElementById("batchBtn").addEventListener("click", runBatch);
+document.getElementById("exportBtn").addEventListener("click", exportResults);
+
+renderKBPanel();
+</script>
+</body>
+</html>
